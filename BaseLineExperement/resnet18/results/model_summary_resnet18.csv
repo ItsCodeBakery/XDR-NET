@@ -1,0 +1,2 @@
+Model,F1 (macro),Precision (macro),Recall (macro),Accuracy,Validation Accuracy
+ResNet18,0.6839,0.6852,0.694,0.8182,0.8182
