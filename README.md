@@ -54,6 +54,24 @@ We apply a reproducible, screening-oriented preprocessing pipeline:
 
 ---
 
+## 📉 Learning Curves
+
+The learning curves indicate stable optimization and good generalization: validation **accuracy** and **macro-F1** steadily improve and closely track training metrics, while the **loss** decreases without divergence. The absence of large gaps between training and validation curves suggests that class rebalancing, label smoothing, and cosine-scheduled AdamW effectively mitigate overfitting on APTOS.
+
+<div align="center">
+
+**Accuracy (train/val)**  
+<img src="https://github.com/ItsCodeBakery/XDR-NET/blob/main/Proposed%20Methodology/plots/accuracy_curve.png" alt="Accuracy Curve" width="48%">
+
+**Macro-F1 (train/val)**  
+<img src="https://github.com/ItsCodeBakery/XDR-NET/blob/main/Proposed%20Methodology/plots/f1_curve.png" alt="F1 Curve" width="48%">
+
+**Loss (train/val)**  
+<img src="https://github.com/ItsCodeBakery/XDR-NET/blob/main/Proposed%20Methodology/plots/loss_curve.png" alt="Loss Curve" width="60%">
+
+</div>
+
+---
 ## Explainability
 
 We generate class-discriminative **Grad-CAM** overlays from the final convolutional block, enabling graders to visualize lesion evidence and failure modes.
