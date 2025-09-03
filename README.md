@@ -4,13 +4,13 @@
 
 ---
 
-## 🧩 Overview
+##  Overview
 
 Automated diabetic retinopathy (DR) screening demands models that are **accurate, efficient, and transparent**. Pure CNNs capture local lesion cues (microaneurysms, hemorrhages, exudates) but can miss **global retinal context**; attention models capture global relations but are often heavy. **XDR-Net** balances both: it keeps EfficientNet’s compact convolutional features and adds a single token-level self-attention block before pooling. We pair this with a pragmatic training recipe for imbalanced grades and clinician-oriented visual explanations.
 
 ---
 
-## 🧼 Preprocessing (APTOS 2019)
+## Preprocessing (APTOS 2019)
 
 We apply a reproducible, screening-oriented preprocessing pipeline:
 
@@ -24,7 +24,7 @@ We apply a reproducible, screening-oriented preprocessing pipeline:
 
 ---
 
-## 🏗️ Proposed Methodology (XDR-Net)
+## 🏗Proposed Methodology (XDR-Net)
 
 **Backbone:** EfficientNet (from `timm`) for compact, high-quality feature extraction  
 **Token-Attention bridge:** a **single Multi-Head Self-Attention (MHA)** applied on the final feature map (tokenized) to inject **global retinal context** with minimal overhead  
@@ -38,7 +38,7 @@ We apply a reproducible, screening-oriented preprocessing pipeline:
 
 ---
 
-## 📈 Results (APTOS 2019)
+## Results (APTOS 2019)
 
 **Validation split:** 1,805 images (five classes)
 
@@ -54,7 +54,7 @@ We apply a reproducible, screening-oriented preprocessing pipeline:
 
 ---
 
-## 🧐 Explainability
+## Explainability
 
 We generate class-discriminative **Grad-CAM** overlays from the final convolutional block, enabling graders to visualize lesion evidence and failure modes.
 
@@ -64,5 +64,38 @@ We generate class-discriminative **Grad-CAM** overlays from the final convolutio
 
 ---
 
-## 📂 Repository Layout
+##  Repository Layout
+Proposed Methodology/
+├─ code/ # XDR-Net training/inference scripts or notebooks
+├─ plots/ # training curves, CM, Grad-CAM, methodology figure, CLAHE demo
+└─ splits/ # train/val CSVs used in APTOS experiments
+BaseLineExperement/
+├─ resnet18/
+│ ├─ code/ # training/inference for ResNet-18
+│ └─ plots/ # curves, confusion matrix, etc.
+├─ resnet50/
+│ ├─ code/
+│ └─ plots/
+└─ conveynet/
+├─ code/
+└─ plots/
+
+
+> Note: GitHub hides empty folders—each subfolder includes a small placeholder to remain visible.
+
+---
+
+## 🔁 Reproducibility (Kaggle / Local)
+
+- **Dataset:** APTOS 2019 (add on Kaggle and point `train_images/` + `train.csv`)  
+- **Env:** Python 3.10+, PyTorch 2.x, `timm`, `torchvision`, `scikit-learn`, `pandas`, `matplotlib`  
+- **Run:** See `Proposed Methodology/code/` for XDR-Net and `BaseLineExperement/*/code/` for baselines  
+- **Explainability:** Grad-CAM scripts reproduce the class-wise grids shown above
+
+---
+
+## 📫 Contact
+
+Questions or collaboration: **shayan.ali@imsciences.edu.pk**
+
 
