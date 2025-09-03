@@ -84,7 +84,7 @@ We generate class-discriminative **Grad-CAM** overlays from the final convolutio
 
 ---
 
-## 🔁 Reproducibility (Kaggle / Local)
+## Reproducibility (Kaggle / Local)
 
 - **Dataset:** APTOS 2019 (add on Kaggle and point `train_images/` + `train.csv`)  
 - **Env:** Python 3.10+, PyTorch 2.x, `timm`, `torchvision`, `scikit-learn`, `pandas`, `matplotlib`  
@@ -93,7 +93,7 @@ We generate class-discriminative **Grad-CAM** overlays from the final convolutio
 
 ---
 
-## 📫 Contact
+## Contact
 
 Questions or collaboration: **shayan.ali@imsciences.edu.pk**
 
