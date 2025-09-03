@@ -1,6 +1,6 @@
-# XDR-Net: Explainable Hybrid CNN→Token-Attention for Diabetic Retinopathy Detection
+# XDR-NET: Hybrid CNN–Transformer Network for Diabetic Retinopathy Detection
 
-**One-line:** A lightweight, explainable DR grader that couples an EfficientNet backbone with a single self-attention bridge, delivering strong performance and clear Grad-CAM evidence on APTOS 2019.
+A lightweight, explainable DR grader that couples an EfficientNet backbone with a single self-attention bridge, delivering strong performance and clear Grad-CAM evidence on APTOS 2019.
 
 ---
 
