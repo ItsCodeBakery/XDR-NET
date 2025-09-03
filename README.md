@@ -64,25 +64,6 @@ We generate class-discriminative **Grad-CAM** overlays from the final convolutio
 
 ---
 
-##  Repository Layout
-Proposed Methodology/
-├─ code/ # XDR-Net training/inference scripts or notebooks
-├─ plots/ # training curves, CM, Grad-CAM, methodology figure, CLAHE demo
-└─ splits/ # train/val CSVs used in APTOS experiments
-BaseLineExperement/
-├─ resnet18/
-│ ├─ code/ # training/inference for ResNet-18
-│ └─ plots/ # curves, confusion matrix, etc.
-├─ resnet50/
-│ ├─ code/
-│ └─ plots/
-└─ conveynet/
-├─ code/
-└─ plots/
-
-
-> Note: GitHub hides empty folders—each subfolder includes a small placeholder to remain visible.
-
 ---
 
 ## 🔁 Reproducibility (Kaggle / Local)
