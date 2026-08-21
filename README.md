@@ -1,775 +1,338 @@
-# XDR-Net: A Hybrid Convolution Single-Layer Attention Model with Balanced Optimization for Diabetic Retinopathy Detection
+# XDR-Net: A Hybrid Convolutional Network with a Single-Block Attention Bridge and Balanced Optimization for Diabetic Retinopathy Detection
 
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
-[![Python: 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Framework: PyTorch](https://img.shields.io/badge/Framework-PyTorch-ee4c2c.svg)](https://pytorch.org/)
-[![Model: EfficientNet](https://img.shields.io/badge/Backbone-EfficientNet--B0-orange.svg)](https://github.com/rwightman/pytorch-image-models)
+[![Backbone: EfficientNet-B0](https://img.shields.io/badge/Backbone-EfficientNet--B0-orange.svg)](https://github.com/huggingface/pytorch-image-models)
 
-Official implementation of **XDR-Net**, a compact hybrid CNN-Transformer framework for automated diabetic retinopathy screening that combines CLAHE-based normalization, class-aware sampling, an EfficientNet backbone, and a lightweight single-layer self-attention bridge.
+Official implementation and reproducibility materials for **XDR-Net**, a compact hybrid CNN-attention framework for five-class diabetic retinopathy (DR) grading from color fundus photographs.
 
+XDR-Net combines retinal preprocessing, an EfficientNet-B0 convolutional backbone, a **single-block attention bridge** for global contextual interaction, effective-number-based class balancing, and post-hoc Grad-CAM visualization. The current manuscript evaluates the framework on APTOS 2019, EyePACS, Messidor, and IDRiD.
 
-> **🎯 Key Achievement**: 97.40% accuracy on APTOS 2019, outperforming Swin-T by +1.58% and ViT by +3.07%
-
----
-
-## 🔬 Research Overview
-
-Diabetic retinopathy (DR) is a leading cause of preventable blindness, characterized by subtle retinal lesions and ordinal progression of severity. Automated DR grading from fundus photographs faces critical challenges:
-
-- **Strong class imbalance** with overrepresentation of healthy/mild cases
-- **Heterogeneous acquisition conditions** (illumination, color, focus)
-- **Ambiguous boundaries** between adjacent severity grades
-- **Need for interpretability** in clinical deployment
-
-### The Challenge
-
-Conventional CNNs capture local lesion patterns (microaneurysms, hemorrhages, exudates) but struggle to integrate **global retinal context**. Vision Transformers provide global reasoning but require massive datasets and heavy computation, limiting clinical deployment and weakening post-hoc explanations like Grad-CAM.
-
-### Our Solution: XDR-Net
-
-XDR-Net addresses these limitations through:
-
-1. **Hybrid Architecture**: EfficientNet-B0 backbone + single-layer self-attention bridge
-2. **Robust Preprocessing**: CLAHE-based normalization to handle acquisition variability
-3. **Balanced Optimization**: Class-aware sampling with effective-number-based weighting
-4. **Clinical Interpretability**: Grad-CAM on final convolutional block for lesion-focused heatmaps
+> **Current APTOS 2019 result:** 97.38% accuracy and 97.38% macro-F1 on the fixed image-level evaluation partition used in the manuscript.
 
 ---
 
-## 📊 Performance Summary
+## Overview
 
-### Overall Results Across Four Benchmarks
+Diabetic retinopathy grading is challenging because public fundus datasets contain substantial class imbalance, acquisition variability, subtle retinal lesions, and ambiguity between adjacent severity grades. XDR-Net is designed to retain efficient convolutional lesion representation while introducing limited-cost global contextual modeling.
 
-| Dataset | Accuracy | Macro-F1 | Macro-Precision | Macro-Recall | Macro-AUC |
-|---------|----------|----------|-----------------|--------------|-----------|
-| **APTOS 2019** | **97.40%** | **97.38%** | **97.43%** | **97.40%** | **97.99%** |
-| **EyePACS** | **97.45%** | **98.35%** | **98.90%** | **97.80%** | **98.90%** |
-| **Messidor** | **96.82%** | **96.95%** | **97.50%** | **96.40%** | **97.50%** |
-| **IDRiD** | **95.90%** | **96.17%** | **96.75%** | **95.60%** | **96.75%** |
+The current pipeline contains four main components:
 
-### Comparison with State-of-the-Art (APTOS 2019)
+1. **Retinal preprocessing** — circular retinal cropping, resizing to 384×384, per-channel normalization, CLAHE-based contrast enhancement, and mild training-time augmentation.
+2. **EfficientNet-B0 backbone** — convolutional extraction of local retinal features.
+3. **Single-block attention bridge** — global interaction among the final 12×12 spatial feature locations (144 tokens, token dimension 320, four attention heads).
+4. **Balanced optimization** — effective-number-derived class weights used for class-aware sampling and class-weighted, label-smoothed cross-entropy.
 
-| Model | Backbone | Accuracy | Macro-F1 | Parameters | FLOPs | Latency |
-|-------|----------|----------|----------|------------|-------|---------|
-| ResNet-50 | CNN | 82.73% | 70.32% | 25.6M | 4.1G | - |
-| ConvNeXt-Base | CNN | 81.04% | 66.18% | 88.6M | 15.4G | - |
-| MobileNetV3 | CNN | 89.12% | 89.14% | 5.4M | 0.2G | - |
-| InceptionV4 | CNN | 92.54% | 92.56% | 42.7M | 12.3G | - |
-| ViT-B/16 | Transformer | 94.33% | 94.14% | 86.6M | 17.6G | - |
-| Swin-T | Transformer | 95.82% | 95.85% | 28.3M | 4.5G | - |
-| **XDR-Net** | **Hybrid** | **97.40%** | **97.38%** | **4.22M** | **0.79G** | **7.96ms** |
-
-**Key Advantages:**
-- ✅ **+1.58%** accuracy improvement over Swin-T
-- ✅ **+3.07%** accuracy improvement over ViT
-- ✅ **+5.75%** Macro-F1 improvement over best baseline
-- ✅ **6.7× smaller** than Swin-T (4.22M vs 28.3M parameters)
-- ✅ **5.7× faster** than Swin-T (7.96ms vs 15.7ms latency)
-
-### Comparison with Recent Methods (2023-2025)
-
-| Method | Year | APTOS Acc/F1 | Messidor Acc/F1 | EyePACS Acc/F1 | IDRiD Acc/F1 |
-|--------|------|--------------|-----------------|----------------|--------------|
-| DA-FlowNet | 2025 | 94.10/92.70 | 94.00/92.35 | 94.20/92.50 | - |
-| MSTNet | 2025 | 93.50/91.90 | 93.40/91.77 | 93.60/91.85 | - |
-| Hybrid CNN+Transformer | 2023 | 94.86/93.12 | 94.20/92.90 | 94.10/92.85 | - |
-| EfficientViT | 2024 | 95.00/94.00 | 95.20/94.10 | 95.10/94.05 | 95.33/94.04 |
-| SatFormer | 2023 | 93.80/91.20 | 93.60/91.00 | 93.25/90.01 | - |
-| **XDR-Net** | **2025** | **97.40/97.38** | **96.82/96.95** | **97.45/98.35** | **95.90/96.17** |
+Grad-CAM is generated from the final convolutional block for post-hoc visualization. For IDRiD, pixel-level lesion masks are **not used for model training**; they are used only for quantitative post-hoc evaluation of Grad-CAM localization.
 
 ---
 
-## 🏗️ Architecture & Methodology
+## Performance Summary
 
-### System Overview
+| Dataset | Accuracy (%) | Macro-F1 (%) | Macro-Precision (%) | Macro-Recall (%) | Macro-AUC (%) |
+|---|---:|---:|---:|---:|---:|
+| **APTOS 2019** | **97.38** | **97.38** | **97.43** | **97.40** | **97.99** |
+| **EyePACS** | **97.45** | **98.35** | **98.90** | **97.80** | **98.90** |
+| **Messidor** | **96.82** | **96.95** | **97.50** | **96.40** | **97.50** |
+| **IDRiD** | **95.90** | **96.17** | **96.75** | **95.60** | **96.75** |
 
-<p align="center">
-  <img src="https://github.com/ItsCodeBakery/XDR-NET/blob/main/Proposed%20Methodology/plots/METHODLOGY.png" alt="XDR-Net Architecture" width="800"/>
-  <br>
-  <em>Figure 1: XDR-Net architectural workflow showing preprocessing, feature extraction, attention bridge, and classification.</em>
-</p>
+These values correspond to the current manuscript tables and should be interpreted within the reported benchmark protocols. They do not constitute prospective or independent external clinical validation.
 
-### Key Components
+---
 
-#### 1. Preprocessing Pipeline
+## Dataset Partitioning
 
-**CLAHE Enhancement** - Contrast-Limited Adaptive Histogram Equalization applied to luminance channel:
+All partitions are created **before** augmentation or class rebalancing and are kept fixed across XDR-Net and the reproduced baseline models.
 
-<p align="center">
-  <img src="https://github.com/ItsCodeBakery/XDR-NET/blob/main/Proposed%20Methodology/plots/ClahePrep.png" alt="CLAHE Preprocessing" width="700"/>
-  <br>
-  <em>Figure 2: Effect of CLAHE preprocessing on fundus images, enhancing local contrast while preserving lesion details.</em>
-</p>
+Reliable patient identifiers are not consistently available across the four public datasets. Therefore, the manuscript uses **fixed image-level partitions**, and patient-level independence cannot be verified.
 
-**Pipeline Steps:**
-1. Circular crop centered on optic disc (removes black borders)
-2. Resize to 384×384 pixels
-3. Per-channel normalization (ImageNet statistics)
-4. CLAHE on LAB luminance channel (clip limit τ = 2.0, tile size 8×8)
+| Dataset | Total images | Training | Validation | Test | Seed | Partition level |
+|---|---:|---:|---:|---:|---:|---|
+| APTOS 2019 | 3,662 | 3,112 | 550 | N/A | 42 | Image level |
+| EyePACS | 35,126 | 28,102 | 3,512 | 3,512 | 42 | Image level |
+| Messidor | 1,200 | 960 | 120 | 120 | 42 | Image level |
+| IDRiD | 516 | 330 | 83 | 103 | 42 | Image level |
 
-#### 2. Backbone: EfficientNet-B0
+For APTOS 2019, the public competition test labels are unavailable, so the fixed validation subset is used as the final evaluation cohort. For IDRiD, the separate test subset is retained for evaluation.
 
-```python
-# Model Configuration
-Backbone: EfficientNet-B0 (timm pretrained)
-Output channels: 320
-Spatial resolution: 12×12 (H'×W')
-Parameters: 4.014M
-FLOPs: 0.83G
+---
+
+## Architecture
+
+### EfficientNet-B0 feature extraction
+
+For a 384×384 input image, the final EfficientNet-B0 convolutional feature tensor has spatial resolution 12×12 and 320 channels:
+
+```text
+Input:              3 × 384 × 384
+Final feature map:  320 × 12 × 12
+Spatial tokens:     144
+Token dimension:    320
 ```
 
-**Features:**
-- Compound scaling for efficient feature learning
-- Depthwise separable convolutions
-- Mobile inverted bottleneck (MBConv) blocks
-- Pretrained on ImageNet for robust initialization
+### Single-block attention bridge
 
-#### 3. Token-Attention Bridge
+The final convolutional feature map is reshaped into 144 spatial tokens and processed by a lightweight four-head multi-head self-attention bridge. The attention operation allows spatially distant retinal regions to exchange contextual information while operating at the low-resolution final feature stage.
 
-**Single-layer Multi-Head Self-Attention (MHA):**
-
-```python
-# Attention Configuration
-Number of tokens N_t = H' × W' = 12 × 12 = 144
-Token dimension d = 320
-Number of heads h = 4
-Dimension per head d_h = 80
-FFN expansion = 4
-Total parameters: +0.205M
+```text
+Token count (Nt):     144
+Token dimension (d):  320
+Attention heads (h):  4
+Per-head dimension:   80
 ```
 
-**Mathematical Formulation:**
-
-Tokenization: T ∈ ℝ^(N_t × d), where each token represents a 32×32 patch
-
-Multi-head attention:
-```
-Q, K, V = T·W_Q, T·W_K, T·W_V
-Attention^(m) = softmax(Q^(m)·K^(m)ᵀ / √d_h) · V^(m)
-Output = Concat(Attention^(1), ..., Attention^(h)) · W_O
-```
-
-**Benefits:**
-- Captures long-range dependencies across retinal quadrants
-- Detects global lesion distributions and symmetry
-- Minimal computational overhead (O(N_t² · d) with small N_t)
-- Complements local CNN features
-
-#### 4. Classification Head
-
-```python
-Architecture:
-- Global Average Pooling: ℝ^(144×320) → ℝ^320
-- Layer Normalization
-- Dropout (p=0.3)
-- Linear: ℝ^320 → ℝ^5 (five DR grades)
-- Softmax activation
-```
+The current manuscript reports **4.219 M total trainable parameters** for XDR-Net. Computational figures reported below follow the same single-image profiling protocol used in the revised manuscript.
 
 ---
 
-## 📈 Experimental Results
+## Preprocessing and Augmentation
 
-### Dataset Descriptions
+### Deterministic preprocessing
 
-#### APTOS 2019 Blindness Detection
-- **Size:** 3,662 fundus images
-- **Classes:** 5 DR severity levels (No DR, Mild, Moderate, Severe, Proliferative)
-- **Source:** Community-level screening programs
-- **Characteristics:** Heterogeneous illumination, focus, field-of-view
-- **Split:** 1,857 train / 1,805 validation
+1. Retinal-region/circular cropping to suppress non-retinal borders.
+2. Resize to 384×384 pixels.
+3. Per-channel normalization.
+4. CLAHE-based contrast enhancement on the luminance channel.
 
-#### EyePACS
-- **Size:** 88,702 fundus images
-- **Classes:** 5 DR severity levels
-- **Source:** Multiple clinics and screening campaigns
-- **Characteristics:** Extreme class imbalance, high domain shift
-- **Challenge:** Largest public DR dataset with pronounced acquisition variability
+### Training-time augmentation
 
-#### Messidor
-- **Size:** 1,200 fundus images
-- **Classes:** 5 DR severity levels
-- **Source:** Clinical settings with controlled imaging
-- **Characteristics:** High-quality, consistent illumination
-- **Reliability:** Standard benchmark with expert annotations
+Mild geometric and photometric transforms are applied only during training, including horizontal flipping, rotation/resize-crop, slight color jitter, and Gaussian blur.
 
-#### IDRiD (Indian Diabetic Retinopathy Image Dataset)
-- **Size:** 516 carefully curated images
-- **Classes:** 5 DR severity levels + pixel-level lesion annotations
-- **Source:** Clinical setting
-- **Special:** Includes microaneurysms, hemorrhages, exudates annotations
-- **Value:** Fine-grained recognition benchmark
-
-### Confusion Matrices
-
-**APTOS 2019:**
-<p align="center">
-  <img src="https://github.com/ItsCodeBakery/XDR-NET/blob/main/Proposed%20Methodology/plots/confusion_matrix_counts_vs_normalized.png" alt="Confusion Matrix APTOS" width="700"/>
-  <br>
-  <em>Figure 3: Confusion matrix for APTOS 2019 showing strong diagonal performance with minimal inter-class confusion.</em>
-</p>
-
-**EyePACS:**
-<p align="center">
-  <img src="https://github.com/ItsCodeBakery/XDR-NET/blob/main/Proposed%20Methodology/plots/cmEyePacs.png" alt="Confusion Matrix EyePACS" width="600"/>
-  <br>
-  <em>Figure 4: Confusion matrix for EyePACS dataset demonstrating robust performance on large-scale data.</em>
-</p>
-
-**IDRiD:**
-<p align="center">
-  <img src="https://github.com/ItsCodeBakery/XDR-NET/blob/main/Proposed%20Methodology/plots/cmIDriD.png" alt="Confusion Matrix IDRiD" width="600"/>
-  <br>
-  <em>Figure 5: Confusion matrix for IDRiD showing accurate classification even with limited data.</em>
-</p>
-
-**Messidor:**
-<p align="center">
-  <img src="https://github.com/ItsCodeBakery/XDR-NET/blob/main/Proposed%20Methodology/plots/cmMessidor.png" alt="Confusion Matrix Messidor" width="600"/>
-  <br>
-  <em>Figure 6: Confusion matrix for Messidor dataset with high-quality clinical images.</em>
-</p>
-
-### Training Dynamics
-
-<div align="center">
-
-**Accuracy Curve (Train/Validation):**
-<img src="https://github.com/ItsCodeBakery/XDR-NET/blob/main/Proposed%20Methodology/plots/accuracy_curve.png" alt="Accuracy Curve" width="48%">
-
-**Macro-F1 Curve (Train/Validation):**
-<img src="https://github.com/ItsCodeBakery/XDR-NET/blob/main/Proposed%20Methodology/plots/f1_curve.png" alt="F1 Curve" width="48%">
-
-**Loss Curve (Train/Validation):**
-<img src="https://github.com/ItsCodeBakery/XDR-NET/blob/main/Proposed%20Methodology/plots/loss_curve.png" alt="Loss Curve" width="60%">
-
-<em>Figure 7: Training dynamics showing stable optimization without overfitting. Close alignment between train/validation curves indicates effective regularization.</em>
-
-</div>
-
-**Key Observations:**
-- Convergence achieved at epoch ~40-45
-- Validation metrics closely track training (gap < 1%)
-- No catastrophic overfitting despite class imbalance
-- Smooth loss decay confirms stable gradient flow
+Validation and test preprocessing remain deterministic. Optional test-time augmentation (TTA) averages predictions over **M = 4** geometric views.
 
 ---
 
-## 🔍 Explainability & Clinical Interpretability
+## Class-Imbalance Handling
 
-### Grad-CAM Visualizations
+Let `n_c` denote the number of training examples in class `c`. XDR-Net derives class weights from the effective number of samples and normalizes the weights to unit mean.
 
-We apply Gradient-weighted Class Activation Mapping (Grad-CAM) on the final convolutional block to generate class-discriminative heatmaps that highlight decision-relevant retinal regions.
+The same class-weight information is used in two places:
 
-**EyePACS Dataset:**
-<p align="center">
-  <img src="https://github.com/ItsCodeBakery/XDR-NET/blob/main/Proposed%20Methodology/plots/EyesPacs.JPG" alt="Grad-CAM EyePACS" width="800"/>
-  <br>
-  <em>Figure 8: Grad-CAM visualizations on EyePACS showing attention on pathological lesions across DR severity grades.</em>
-</p>
+- **Class-aware sampling**, increasing exposure to minority DR grades.
+- **Class-weighted, label-smoothed cross-entropy**, increasing the contribution of minority-class examples to optimization.
 
-**APTOS 2019 Dataset:**
-<p align="center">
-  <img src="https://github.com/ItsCodeBakery/XDR-NET/blob/main/Proposed%20Methodology/plots/APTOS.JPG" alt="Grad-CAM APTOS" width="800"/>
-  <br>
-  <em>Figure 9: Grad-CAM visualizations on APTOS 2019 demonstrating focus on microaneurysms, hemorrhages, and exudates.</em>
-</p>
+Current effective-number settings:
 
-**IDRiD Dataset:**
-<p align="center">
-  <img src="https://github.com/ItsCodeBakery/XDR-NET/blob/main/Proposed%20Methodology/plots/IRDiD.JPG" alt="Grad-CAM IDRiD" width="800"/>
-  <br>
-  <em>Figure 10: Grad-CAM visualizations on IDRiD showing precise localization of subtle lesions in fine-grained cases.</em>
-</p>
+```text
+APTOS 2019: beta ≈ 0.999
+EyePACS:    beta ≈ 0.9999
+Messidor:   beta ≈ 0.995
+IDRiD:      beta ≈ 0.995
+```
 
-### Clinical Validation of Attention
-
-**Quantitative Analysis:**
-- **94.7%** of Grad-CAM activations co-localize with expert-annotated lesion regions
-- **Average IoU** with ground truth: 0.78
-- Model attention aligns with phytopathological knowledge across all severity grades
-
-**What the Model Sees:**
-- ✅ Microaneurysms (small red dots)
-- ✅ Hemorrhages (red blotches)
-- ✅ Hard exudates (yellow/white deposits)
-- ✅ Soft exudates (cotton-wool spots)
-- ✅ Neovascularization (abnormal vessel growth)
+Label smoothing is set to **epsilon = 0.1** for the main experiments. This README does **not** claim a quantitative epsilon sensitivity sweep unless the corresponding experimental results are released and reported in the manuscript.
 
 ---
 
-## 🧪 Ablation Study
-
-Systematic evaluation of each component's contribution on APTOS 2019:
-
-| Configuration | Val. Acc. | Macro-F1 | Macro-AUC | Params (M) | GFLOPs | Latency (ms) |
-|---------------|-----------|----------|-----------|------------|--------|--------------|
-| V1: Backbone only | 80.90% | 63.94% | 91.87% | 4.014 | 0.83 | 11.20 |
-| V2: + CLAHE | 80.08% | 64.55% | 89.98% | 4.014 | 0.83 | 10.94 |
-| V3: + Class reweighting | 78.04% | 59.71% | 90.49% | 4.014 | 0.83 | 10.78 |
-| V4: + Attention bridge | 81.58% | 66.72% | 90.07% | 4.219 | 0.83 | 9.86 |
-| **V5: + TTA (XDR-Net)** | **97.38%** | **97.38%** | **97.99%** | **4.219** | **0.79** | **7.96** |
-
-### Key Findings
-
-1. **CLAHE Preprocessing** (+0.61% Macro-F1)
-   - Enhances lesion visibility
-   - Stabilizes performance across acquisition conditions
-   - Zero computational overhead
-
-2. **Class Reweighting** (-5.24% Macro-F1 when isolated)
-   - Destabilizes optimization when used alone
-   - Critical when combined with attention bridge
-   - Addresses severe class imbalance (50% No DR in APTOS)
-
-3. **Attention Bridge** (+6.78% Macro-F1)
-   - Largest single improvement
-   - Enables global context modeling
-   - Only +0.205M parameters, negligible FLOPs
-
-4. **Test-Time Augmentation** (+30.66% Macro-F1)
-   - Dramatic performance boost
-   - Averages predictions over M=4 augmented views
-   - Reduces variance in predictions
-
----
-
-## ⚙️ Implementation Details
-
-### Hardware & Environment
+## Training Configuration
 
 ```yaml
-Hardware:
-  GPU: NVIDIA RTX 3090 (24GB VRAM)
-  CPU: Intel Xeon (multi-core)
-  RAM: ≥16GB
-  Storage: SSD recommended
-
-Software:
-  Python: 3.10+
-  PyTorch: 2.0+
-  CUDA: 11.3+
-  Mixed Precision: Enabled (AMP)
-```
-
-### Training Configuration
-
-```yaml
-Data:
-  Image size: 384 × 384
-  Batch size: 32
-  Train split: 80%
-  Validation split: 20%
-  Patient-level split: Enforced
-
-Augmentation (Training Only):
-  Horizontal flip: p=0.5
-  Random rotation: ±15°
-  Random resize/crop: scale=(0.9, 1.1)
-  Color jitter: brightness=0.2, contrast=0.2
-  Gaussian blur: σ=0.5, p=0.3
+Input:
+  image_size: 384x384
+  batch_size: 32
 
 Optimization:
-  Optimizer: AdamW
-  β₁, β₂: 0.9, 0.999
-  Initial LR: 3×10⁻⁴
-  Schedule: Cosine decay
-  Weight decay: 1×10⁻⁴
-  Gradient clipping: ||g||₂ ≤ 1.0
-  
-Loss:
-  Type: Cross-entropy
-  Label smoothing: ε=0.1
-  Class weighting: Effective-number based
-  β (APTOS): 0.999
-  β (EyePACS): 0.9999
-  β (Messidor/IDRiD): 0.995
+  optimizer: AdamW
+  beta1: 0.9
+  beta2: 0.999
+  initial_learning_rate: 3e-4
+  weight_decay: 1e-4
+  learning_rate_schedule: cosine decay
+  gradient_clipping_l2: 1.0
+  maximum_epochs: 20
+  early_stopping_patience: 3
+  early_stopping_metric: validation macro-F1
+  checkpoint_selection: highest validation macro-F1
 
 Regularization:
-  Dropout: p=0.3 (classification head)
-  Early stopping: patience=15 epochs
-  Metric: Validation Macro-F1
+  label_smoothing: 0.1
+  mixed_precision: enabled
 
 Inference:
-  TTA: M=4 (flips + crops)
-  Temperature scaling: T=1.5
-  Mixed precision: float16
+  tta_views: 4
 ```
 
-### Training Time
-
-| Dataset | Pretraining | Fine-tuning | Total | GPU Hours |
-|---------|-------------|-------------|-------|-----------|
-| APTOS 2019 | 2h 30m | 1h 45m | 4h 15m | 4.25 |
-| EyePACS | 12h 30m | 3h 20m | 15h 50m | 15.8 |
-| Messidor | 1h 15m | 45m | 2h 00m | 2.0 |
-| IDRiD | 45m | 30m | 1h 15m | 1.25 |
+Early stopping is triggered when validation macro-F1 fails to improve for **three consecutive epochs**. The checkpoint with the highest validation macro-F1 is retained for final evaluation.
 
 ---
 
-## 🚀 Installation & Usage
+## Reproducibility and Random Seeds
 
-### 1. Clone Repository
+The main experimental protocol uses random seed **42** for dataset partitioning and reproducible training initialization. The implementation seeds Python, NumPy, PyTorch, and available CUDA devices, and deterministic cuDNN execution is enabled where required.
 
-```bash
-git clone https://github.com/ItsCodeBakery/XDR-NET.git
-cd XDR-NET
+```python
+SEED = 42
+random.seed(SEED)
+np.random.seed(SEED)
+torch.manual_seed(SEED)
+torch.cuda.manual_seed_all(SEED)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
 ```
 
-### 2. Create Environment
+The manuscript additionally reports a five-run analysis for stochastic-training variability. Mean and standard deviation values should be interpreted exactly as reported in the corresponding revised manuscript table; this README does not summarize them with a single universal standard-deviation bound.
 
-```bash
-# Using conda (recommended)
-conda create -n xdrnet python=3.10
-conda activate xdrnet
+---
 
-# Or using venv
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+## Experimental Environment
+
+The revised manuscript reports the following environment for the main experiments:
+
+```text
+GPU:            NVIDIA Tesla T4, 16 GB
+Python:         3.12.13
+PyTorch:        2.10.0
+CUDA:           12.8
+cuDNN:          9.10.2
+torchvision:    0.25.0
+timm:           1.0.26
+Albumentations: 2.0.8
+OpenCV:         4.13.0
+scikit-learn:   1.6.1
+NumPy:          2.0.2
+pandas:         2.3.3
 ```
 
-### 3. Install Dependencies
+Automatic mixed precision (AMP) and channels-last memory format are enabled during training.
 
-```bash
-pip install -r requirements.txt
-```
+---
 
-**requirements.txt:**
-```txt
-torch>=2.0.0
-torchvision>=0.15.0
-timm>=0.9.0
-numpy>=1.24.0
-pandas>=2.0.0
-scikit-learn>=1.3.0
-opencv-python>=4.8.0
-albumentations>=1.3.0
-matplotlib>=3.7.0
-seaborn>=0.12.0
-tqdm>=4.65.0
-tensorboard>=2.13.0
-Pillow>=10.0.0
-scipy>=1.11.0
-```
+## Computational Efficiency
 
-### 4. Prepare Datasets
+All computational metrics in the revised manuscript are profiled using a single NVIDIA Tesla T4 GPU at 384×384 input resolution and batch size `B = 1`, using warm-up runs followed by repeated timing iterations.
 
-#### Download Datasets
+For the APTOS ablation configuration:
 
-**APTOS 2019:**
-```bash
-# Kaggle CLI (requires kaggle.json)
-kaggle competitions download -c aptos2019-blindness-detection
-unzip aptos2019-blindness-detection.zip -d data/APTOS2019/
-```
+| Configuration | Params (M) | GFLOPs | Latency (ms/image) | Accuracy (%) | Macro-F1 (%) |
+|---|---:|---:|---:|---:|---:|
+| V4: XDR-Net, single pass | 4.219 | 0.83 | 9.86 | 94.95 | 95.12 |
+| V5: XDR-Net + TTA (`M=4`) | 4.219 | 3.32 | 39.44 | 97.38 | 97.38 |
 
-**EyePACS:**
-```bash
-kaggle datasets download -d dreamer07/eyepacs
-unzip eyepacs.zip -d data/EyePACS/
-```
+For V5, GFLOPs represent the total compute across all four augmentation passes. TTA therefore improves the reported final prediction metrics at the cost of approximately fourfold inference compute relative to a single pass.
 
-**Messidor:**
-- Download from: https://www.adcis.net/en/third-party/messidor/
-- Place in `data/Messidor/`
+---
 
-**IDRiD:**
-- Download from: https://ieee-dataport.org/open-access/indian-diabetic-retinopathy-image-dataset-idrid
-- Place in `data/IDRiD/`
+## Grad-CAM Explainability
 
-#### Directory Structure
+Grad-CAM is computed from the final convolutional block before the attention bridge. The resulting saliency maps are post-hoc visualizations of image regions associated with the model prediction.
 
-```
+### Quantitative IDRiD localization analysis
+
+IDRiD pixel-level lesion annotations are **not used as training supervision**. They are used only for post-hoc evaluation of Grad-CAM localization on correctly classified images containing at least one annotated lesion.
+
+Current manuscript results:
+
+| Metric | Result |
+|---|---:|
+| Evaluated images | 82 |
+| Pointing-game accuracy | 84.15% |
+| Mean lesion-region energy ratio | 58.74% |
+| Mean threshold-based IoU | 0.36 |
+
+These metrics quantify spatial agreement between Grad-CAM activation and annotated lesion regions. They should not be interpreted as proof of causal model reasoning or as clinically validated diagnostic explanations.
+
+---
+
+## Ablation Summary
+
+The current manuscript evaluates the following incremental configurations across all four datasets:
+
+- **V1:** EfficientNet-B0 backbone only
+- **V2:** + CLAHE preprocessing
+- **V3:** + class reweighting
+- **V4:** + single-block attention bridge
+- **V5:** + test-time augmentation (final XDR-Net configuration)
+
+APTOS 2019 results:
+
+| Variant | Val. Acc. (%) | Macro-F1 (%) | Macro-AUC (%) | Params (M) | GFLOPs | Latency (ms) |
+|---|---:|---:|---:|---:|---:|---:|
+| V1: Backbone only | 80.90 | 63.94 | 91.87 | 4.014 | 0.79 | 11.20 |
+| V2: + CLAHE | 80.08 | 64.55 | 89.98 | 4.014 | 0.79 | 10.94 |
+| V3: + Class reweighting | 78.04 | 59.71 | 90.49 | 4.014 | 0.79 | 10.78 |
+| V4: + Attention bridge | 94.95 | 95.12 | 95.60 | 4.219 | 0.83 | 9.86 |
+| **V5: + TTA (XDR-Net)** | **97.38** | **97.38** | **97.99** | **4.219** | **3.32** | **39.44** |
+
+---
+
+## Repository Structure
+
+```text
 XDR-NET/
-├── data/
-│   ├── APTOS2019/
-│   │   ├── train_images/
-│   │   ├── test_images/
-│   │   └── train.csv
-│   ├── EyePACS/
-│   │   ├── train/
-│   │   └── trainLabels.csv
-│   ├── Messidor/
-│   │   └── images/
-│   └── IDRiD/
-│       ├── images/
-│       └── labels.csv
 ├── Proposed Methodology/
 │   ├── code/
 │   │   ├── train.py
 │   │   ├── test.py
 │   │   ├── model.py
-│   │   └── utils.py
+│   │   ├── dataset.py
+│   │   ├── utils.py
+│   │   └── gradcam.py
 │   └── plots/
 ├── BaseLineExperement/
-│   ├── ResNet/
-│   ├── ConvNeXt/
-│   └── ...
-├── checkpoints/
-├── logs/
-└── requirements.txt
-```
-
-### 5. Training
-
-```bash
-cd "Proposed Methodology/code"
-
-# Train on APTOS 2019
-python train.py \
-    --dataset aptos2019 \
-    --data_path ../../data/APTOS2019 \
-    --batch_size 32 \
-    --epochs 100 \
-    --lr 3e-4 \
-    --output_dir ../../checkpoints/aptos
-
-# Train on EyePACS
-python train.py \
-    --dataset eyepacs \
-    --data_path ../../data/EyePACS \
-    --batch_size 32 \
-    --epochs 100 \
-    --beta 0.9999  # Higher β for extreme imbalance
-```
-
-### 6. Evaluation
-
-```bash
-# Evaluate trained model
-python test.py \
-    --checkpoint ../../checkpoints/aptos/best_model.pth \
-    --dataset aptos2019 \
-    --data_path ../../data/APTOS2019 \
-    --tta  # Enable test-time augmentation
-```
-
-### 7. Inference on Single Image
-
-```python
-import torch
-from model import XDRNet
-from utils import preprocess_image
-from PIL import Image
-
-# Load model
-model = XDRNet(num_classes=5)
-checkpoint = torch.load('checkpoints/best_model.pth')
-model.load_state_dict(checkpoint['model_state_dict'])
-model.eval()
-
-# Load and preprocess image
-image = Image.open('path/to/fundus.jpg')
-input_tensor = preprocess_image(image)
-
-# Predict
-with torch.no_grad():
-    logits = model(input_tensor.unsqueeze(0))
-    probs = torch.softmax(logits, dim=1)
-    pred_class = torch.argmax(probs, dim=1).item()
-    confidence = probs[0, pred_class].item()
-
-dr_grades = ['No DR', 'Mild', 'Moderate', 'Severe', 'Proliferative DR']
-print(f"Prediction: {dr_grades[pred_class]}")
-print(f"Confidence: {confidence:.2%}")
-```
-
-### 8. Generate Grad-CAM
-
-```python
-from utils import generate_gradcam
-
-# Generate Grad-CAM visualization
-gradcam_img = generate_gradcam(
-    model=model,
-    image=input_tensor,
-    target_class=pred_class,
-    layer_name='features'  # Final conv block
-)
-
-# Save visualization
-gradcam_img.save('gradcam_output.png')
-```
-
----
-
-## 📚 Repository Structure
-
-```
-XDR-NET/
-│
-├── Proposed Methodology/
-│   ├── code/
-│   │   ├── train.py              # Training script
-│   │   ├── test.py               # Evaluation script
-│   │   ├── model.py              # XDR-Net architecture
-│   │   ├── dataset.py            # Dataset loaders
-│   │   ├── utils.py              # Utilities (augmentation, metrics)
-│   │   ├── gradcam.py            # Grad-CAM implementation
-│   │   └── config.py             # Configuration management
-│   │
-│   └── plots/                    # Result visualizations
-│       ├── METHODLOGY.png
-│       ├── ClahePrep.png
-│       ├── confusion_matrix_*.png
-│       ├── accuracy_curve.png
-│       ├── f1_curve.png
-│       ├── loss_curve.png
-│       └── *_gradcam.png
-│
-├── BaseLineExperement/
-│   ├── ResNet18/code/
-│   ├── ResNet50/code/
-│   ├── ConvNeXt/code/
-│   └── ...
-│
-├── data/                         # Dataset directory (not in repo)
-├── checkpoints/                  # Model checkpoints
-├── logs/                         # TensorBoard logs
+├── split_files/
 ├── requirements.txt
 ├── README.md
 └── LICENSE
 ```
 
+Exact filenames may vary as the repository is synchronized with the revised manuscript. Dataset split manifests and relevant reproducibility materials should be retained with the released implementation.
+
 ---
 
-## 🔬 Reproducibility
+## Installation
 
-### Random Seeds
-
-All experiments use fixed seeds for reproducibility:
-
-```python
-SEED = 42
-torch.manual_seed(SEED)
-torch.cuda.manual_seed(SEED)
-np.random.seed(SEED)
-random.seed(SEED)
-torch.backends.cudnn.deterministic = True
-torch.backends.cudnn.benchmark = False
+```bash
+git clone https://github.com/ItsCodeBakery/XDR-NET.git
+cd XDR-NET
+pip install -r requirements.txt
 ```
 
-### Dataset Splits
-
-Patient-level splits are enforced to prevent data leakage:
-- Train/Validation split: 80/20
-- Test set: Separate when available
-- Stratified sampling maintains class distribution
-
-### Hyperparameter Sensitivity
-
-Key hyperparameters with tested ranges:
-
-| Parameter | Default | Tested Range | Impact |
-|-----------|---------|--------------|--------|
-| Learning rate | 3×10⁻⁴ | [1×10⁻⁴, 5×10⁻⁴] | Moderate |
-| Batch size | 32 | [16, 64] | Low |
-| Label smoothing ε | 0.1 | [0.0, 0.2] | Moderate |
-| β (class weight) | 0.999 | [0.99, 0.9999] | High |
-| Dropout rate | 0.3 | [0.1, 0.5] | Moderate |
+Datasets are not redistributed in this repository. Please obtain APTOS 2019, EyePACS, Messidor, and IDRiD from their respective official providers and follow the corresponding access and usage conditions.
 
 ---
 
-## 🎯 Key Contributions
+## Training and Evaluation
 
-1. **Novel Hybrid Architecture**
-   - First single-layer attention bridge for DR detection
-   - Balances local CNN features with global transformer context
-   - 6.7× more compact than Swin-T while outperforming it
+Example commands depend on the released scripts and argument definitions. The training configuration used for the manuscript should correspond to the settings documented above: 384×384 input, batch size 32, AdamW, initial learning rate `3e-4`, maximum 20 epochs, early-stopping patience 3, and checkpoint selection by validation macro-F1.
 
-2. **Principled Imbalance Handling**
-   - Effective-number-based class weighting
-   - Dual mechanism: sampling bias + loss reweighting
-   - Consistently improves macro-F1 across all datasets
+Please use the released fixed split manifests rather than generating new partitions when reproducing the manuscript results.
 
-3. **Robust Preprocessing Pipeline**
-   - CLAHE-based contrast enhancement
-   - Preserves lesion details while reducing acquisition variability
-   - Generalizes across heterogeneous imaging conditions
+---
 
-4. **Clinical Interpretability**
-   - Grad-CAM co-localizes with expert-annotated lesions (94.7% IoU)
-   - Provides transparent decision support for clinicians
-   - Validates attention on pathologically meaningful structures
+## Scope and Limitations
 
-5. **Comprehensive Evaluation**
-   - Four benchmark datasets (APTOS, EyePACS, Messidor, IDRiD)
-   - Systematic ablation study
-   - Comparison with 10+ baseline architectures
-   - State-of-the-art performance on all benchmarks
+The reported experiments use public benchmark datasets and do not constitute independent prospective clinical validation. Because reliable patient identifiers are not consistently available, patient-level separation cannot be verified. Generalization to independent institutions, out-of-distribution data, different imaging devices, and severely degraded real-world fundus images remains to be established.
+
+Accordingly, XDR-Net should be regarded as a **promising benchmark research framework requiring further external and prospective validation**, rather than as a deployment-ready clinical system.
+
+---
+
+## Data Availability
+
+The study uses publicly available datasets:
+
+- **APTOS 2019 Blindness Detection** — Kaggle
+- **EyePACS Diabetic Retinopathy Detection** — Kaggle
+- **Messidor** — ADCIS
+- **IDRiD** — IEEE DataPort
+
+The datasets are accessed and used according to the access and usage conditions stated by their respective providers.
+
+---
+
+## License
+
+This repository is distributed under the **MIT License**. See [`LICENSE`](LICENSE) for details.
 
 ---
 
 
 
+---
 
-## 🤝 Acknowledgments
+## Contact
 
-We thank:
-- Kaggle for hosting APTOS 2019 and EyePACS datasets
-- ADCIS for the Messidor database
-- IEEE DataPort for the IDRiD dataset
-- The open-source community for PyTorch and timm
+For questions about the implementation or reproducibility materials, please use the repository issue tracker or the correspondence information provided in the manuscript.
 
 ---
 
-## 🔮 Future Work
-
-- [ ] **Uncertainty Quantification**: Bayesian deep learning for prediction confidence
-- [ ] **Multimodal Integration**: Combine fundus + OCT imaging
-- [ ] **Mobile Deployment**: TFLite/ONNX export for edge devices
-- [ ] **Ordinal Regression**: Exploit ordinal nature of DR severity
-- [ ] **Few-Shot Learning**: Adapt to rare DR subtypes
-- [ ] **Temporal Modeling**: Track disease progression over time
-- [ ] **Fairness Analysis**: Evaluate performance across demographics
-
----
-
-## 📝 License
-
-This project is licensed under the MIT License:
-
-```
-MIT License
-
-Copyright (c) 2025 XDR-Net Contributors
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
-
----
-
-## 📞 Support & Contact
-
-- **Issues**: [GitHub Issues](https://github.com/ItsCodeBakery/XDR-NET/issues)
-- **Pull Requests**: Contributions welcome!
-- **Email**: shayan.ali@imsciences.edu.pk
-
----
-
-## 🌟 Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=ItsCodeBakery/XDR-NET&type=Date)](https://star-history.com/#ItsCodeBakery/XDR-NET&Date)
-
----
-
-**Status**: 🟡 Paper Under Review | 🟢 Code Available | 🔵 Active Development
-
-**Last Updated**: December 2025
